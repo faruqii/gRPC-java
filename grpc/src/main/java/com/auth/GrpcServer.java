@@ -10,16 +10,27 @@ import com.auth.repositories.UserRepositoryImpl;
 import com.auth.service.UserServiceImpl;
 import com.zaxxer.hikari.HikariDataSource;
 
+import io.github.cdimascio.dotenv.Dotenv;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 
 public class GrpcServer {
     public static void main(String[] args) throws IOException, InterruptedException {
+        // Load environment variables
+        Dotenv dotenv = Dotenv.configure().load();
+
+        // Create DataSource using environment variables
         DataSource dataSource = DatabaseConfig.getDataSource();
+
+        // Initialize repository and service
         UserRepositoryImpl userRepository = new UserRepositoryImpl(dataSource);
 
-        Server server = ServerBuilder.forPort(50056)
+        // Get the server port from environment variables with a default value
+        int port = Integer.parseInt(dotenv.get("GRPC_SERVER_PORT", "50056"));
+
+        // Build and start gRPC server
+        Server server = ServerBuilder.forPort(port)
                 .addService((BindableService) new UserServiceImpl(userRepository))
                 .intercept(new LoggingInterceptors())
                 .build();
@@ -38,8 +49,7 @@ public class GrpcServer {
         }));
 
         server.start();
-        System.out.println("Starting server... at port 50056");
+        System.out.println("Starting server... at port " + port);
         server.awaitTermination();
-
     }
 }
